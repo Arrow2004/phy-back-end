@@ -24,6 +24,11 @@ module.exports.createTest = async (req,res)=>{
 }
 module.exports.updateGet = async (req,res)=>{
     try {
+        const _id = jwt.decode(req.headers["x-auth-token"], process.env.JWT_SECRET).user_id
+        let {authors} = await Test.findById(req.params.id)
+        if(!authors.includes(_id)){
+            return res.status(401).json({"message": "Ruxsat etilmagan!!!"})
+        }
         let test = await Test.findById(req.params.id).populate("questions")
         if(!test){
             return res.statu(404).json({"message": "Berilgan id bo'yicha test topilmadi"})
@@ -36,14 +41,17 @@ module.exports.updateGet = async (req,res)=>{
 module.exports.updatePost = async (req,res)=>{
     try {
         const {title,description,themes,questions,participants} = req.body;
+        const _id = jwt.decode(req.headers["x-auth-token"], process.env.JWT_SECRET).user_id
+        let {authors} = await Test.findById(req.params.id)
+        if(!authors.includes(_id)){
+            return res.status(401).json({"message": "Ruxsat etilmagan!!!"})
+        }
         let newQuestions = [];
         for(let question of questions){
             let newQuestion;
-            console.log(question._id)
             if(!question._id){
                 newQuestion = await Question.create(question)
             }else{
-                console.log("Updating")
                 newQuestion = await Question.findByIdAndUpdate(question._id,{
                     question: question.question,
                     answers: question.answers,
