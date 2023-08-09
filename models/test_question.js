@@ -26,6 +26,9 @@ const testScheme = new Schema({
         themeScheme
     ],
     authors: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
+    previewPic: {
+      type: String
+    },
     questions: [
     {
       type: Schema.Types.ObjectId,

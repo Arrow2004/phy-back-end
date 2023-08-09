@@ -1,23 +1,39 @@
 const {Test,Question} = require("../models/test_question")
 const jwt = require("jsonwebtoken")
+const uploadImage = require('../utils/cloudinary')
+const cloudinary = require('cloudinary')
 module.exports.createTest = async (req,res)=>{
     try {
-        const {title,description,questions} = req.body;
+        const uploadPic = await uploadImage(req.file)
+        const {title,description} = req.body;
         const _id = jwt.decode(req.headers["x-auth-token"], process.env.JWT_SECRET).user_id
-        let newQuestions = [];
-        for(let question of questions){
-            let newQuestion = await Question.create(question)
-            newQuestions.push(newQuestion._id)
-        }
         let test = await Test.create({
             title,
             description,
-            questions: newQuestions,
             authors: [
                 _id
-            ]
+            ],
+            previewPic: uploadPic
         })
         return res.status(201).json(test)
+    } catch (error) {
+        console.log(error)
+    }
+}
+module.exports.createQuestions = async (req,res)=>{
+    try {
+        let {questions} = req.body;
+        let ids = []
+        for(question of questions){
+            let _id = (await Question.create(question))._id
+            ids.push(_id)
+        }
+        await Test.findByIdAndUpdate(req.params.id,{
+            $push: {
+                questions: ids
+            },
+        },
+        { new: true, upsert: true })
     } catch (error) {
         console.log(error)
     }
@@ -40,7 +56,7 @@ module.exports.updateGet = async (req,res)=>{
 }
 module.exports.updatePost = async (req,res)=>{
     try {
-        const {title,description,themes,questions,participants} = req.body;
+        const {title,description,themes,questions} = req.body;
         const _id = jwt.decode(req.headers["x-auth-token"], process.env.JWT_SECRET).user_id
         let {authors} = await Test.findById(req.params.id)
         if(!authors.includes(_id)){
@@ -60,7 +76,7 @@ module.exports.updatePost = async (req,res)=>{
             newQuestions.push(newQuestion._id)
         }
         let test = await Test.findByIdAndUpdate(req.params.id,{
-            title,description,themes,questions: newQuestions,participants
+            title,description,themes,questions: newQuestions,
         }).populate("questions")
         return res.status(200).json(test)
     } catch (error) {
@@ -82,6 +98,14 @@ module.exports.getTest = async (req,res) =>{
             return res.statu(404).json({"message": "Berilgan id bo'yicha test topilmadi"})
         }
         return res.status(200).json(test)
+    }catch(error){
+        console.log(error)
+    }
+}
+module.exports.getAllTest = async (req,res) =>{
+    try{
+        let tests = await Test.find();
+        return res.status(200).json(tests)
     }catch(error){
         console.log(error)
     }
